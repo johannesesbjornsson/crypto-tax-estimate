@@ -1,2 +1,0 @@
-[binance]
-file=/Users/johannesesbjornsson/Desktop/ViktigaDokument/2023_tax_year_binance.csv

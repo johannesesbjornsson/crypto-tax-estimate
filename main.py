@@ -25,11 +25,10 @@ def main():
     client = Client(os.environ['B_API_KEY'],os.environ['B_API_SECRET'])
     config = configparser.ConfigParser()
     config.read(r'config.txt')
-    #klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1DAY, "1 Dec, 2017","2 Dec, 2017")
     tokens = get_binance_transactions(config.get('binance', 'file'))
-    for k,v in tokens["BUSD"].items():
-        print(k,v)
-    #print(klines)
+    #for k,v in tokens["BUSD"].items():
+    #    print(k,v)
+    print(tokens.keys())
 
 if __name__ == "__main__":
     main()
