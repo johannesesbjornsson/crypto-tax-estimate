@@ -1,6 +1,11 @@
 # crypto-tax-estimate
 How much do I owe the government ish
 
+pushing:
+```
+git push https://johannesesbjornsson:<PATtoken>@github.com/johannesesbjornsson/crypto-tax-estimate.git
+```
+
 ## Generate CSV
 
 ### Binance
