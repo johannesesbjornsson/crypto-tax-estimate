@@ -1,0 +1,96 @@
+#root {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+.tab-bar {
+  display: flex;
+  gap: 16px; 
+  justify-content: flex-end; 
+}
+.tab-bar button.active {
+   background-color: #2e2d2d; 
+}
+
+.tab-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px; /* adds space between buttons */
+  margin-bottom: 16px;
+}
+
+
+.transactions {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.settings {
+  max-width: 420px;
+  max-height: 420px;
+  margin: 20px auto;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.setting-value {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px 8px;
+  flex-grow: 1;
+  width: 100%;
+  box-sizing: border-box;
+  display: inline-block;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.setting-label {
+  width: 120px;
+  font-weight: bold;
+  text-align: left;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.table-container {
+  max-height: 600px;      /* Set desired scrollable height */
+  width: 100%;
+  overflow-y: auto;       /* Enable vertical scroll */
+  border-radius: 8px;     /* Rounded corners */
+  border: 2px solid #ccc; /* Outer border */
+  
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-family: sans-serif;
+  border: 1px solid #ccc;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+.table th {
+  background-color: #2b1c1c;
+  color: white;
+  font-weight: bold;
+}
+
+.table tbody tr:nth-child(even) {
+  background-color: #3c3b3b;
+}

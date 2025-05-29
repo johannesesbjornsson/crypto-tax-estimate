@@ -1,9 +1,9 @@
 # crypto-tax-estimate
-How much do I owe the government ish
+How much do I owe the government npm run dev
 
 pushing:
 ```
-git push https://johannesesbjornsson:<PATtoken>@github.com/johannesesbjornsson/crypto-tax-estimate.git
+git push https://johannesesbjornsson:<PATtoken>@github.com/johannesesbjornsson/crypto-tax-estimate.
 ```
 
 ## Generate CSV
