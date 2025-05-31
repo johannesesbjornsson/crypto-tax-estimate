@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"fmt"
 )
 
 type Database struct {
@@ -70,4 +71,16 @@ func (db *Database) GetTransactionsByEmail(email string) ([]models.Transaction, 
 	}
 
 	return transactions, nil
+}
+
+func (db *Database) CreateTransaction(tx *models.Transaction) error {
+	if tx == nil {
+		return fmt.Errorf("transaction cannot be nil")
+	}
+
+	if tx.UserID == 0 {
+		return fmt.Errorf("missing UserID on transaction")
+	}
+
+	return db.DB.Create(tx).Error
 }
