@@ -12,11 +12,7 @@ function App() {
     Overview: <div className="">Overview content</div>,
         Transactions: <TransactionsPage />,
         Profile: (
-      <UserProfile
-        name="Johannes Esbjornsson"
-        email="johannes@example.com"
-        currency="GBP"
-      />
+      <UserProfile/>
     ),
   };
 

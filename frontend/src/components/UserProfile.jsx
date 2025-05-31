@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-export default function UserProfile({ name, email, currency }) {
+export default function UserProfile({ }) {
   const [user, setUser] = useState({ 
-    name: name, 
-    email: email, 
-    currency: currency,
+    name: '', 
+    email: '', 
+    currency: '',
     taxStartDate: '',
     taxEndDate: ''
   });
@@ -53,7 +52,7 @@ export default function UserProfile({ name, email, currency }) {
     <div className="settings">
       <div className="setting-row">
         <span className="setting-label">Email:</span>
-        <span className="setting-value">{email}</span>
+        <span className="setting-value">{user.email}</span>
       </div>
       <div className="setting-row">
         <span className="setting-label">Name:</span>
@@ -67,23 +66,32 @@ export default function UserProfile({ name, email, currency }) {
       </div>
       <div className="setting-row">
         <span className="setting-label">Tax Start Date:</span>
-        <input
-          className="setting-value"
-          type="date"
-          name="taxStartDate"
-          value={user.taxStartDate}
-          onChange={handleChange}
-        />
+        
+        <select className="setting-value" name="taxStartDay" value={user.taxStartDay} onChange={handleChange}>
+          {Array.from({ length: 31 }, (_, i) => (
+            <option key={i+1} value={i+1}>{i+1}</option>
+          ))}
+        </select>
+        <span className="date-separator">/</span>
+        <select className="setting-value" name="taxStartMonth" value={user.taxStartMonth} onChange={handleChange}>
+          {Array.from({ length: 12 }, (_, i) => (
+            <option key={i+1} value={i+1}>{i+1}</option>
+          ))}
+        </select>
       </div>
       <div className="setting-row">
         <span className="setting-label">Tax End Date:</span>
-        <input
-          className="setting-value"
-          type="date"
-          name="taxEndDate"
-          value={user.taxEndDate}
-          onChange={handleChange}
-        />
+        <select className="setting-value" name="taxEndDay" value={user.taxEndDay} onChange={handleChange}>
+          {Array.from({ length: 31 }, (_, i) => (
+            <option key={i+1} value={i+1}>{i+1}</option>
+          ))}
+        </select>
+        <span className="date-separator">/</span>
+        <select className="setting-value" name="taxEndMonth" value={user.taxEndMonth} onChange={handleChange}>
+          {Array.from({ length: 12 }, (_, i) => (
+            <option key={i+1} value={i+1}>{i+1}</option>
+          ))}
+        </select>
       </div>
       <div className="setting-row">
         <span className="setting-label">Currency:</span>
