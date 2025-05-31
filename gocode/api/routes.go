@@ -2,13 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-	"net/http"
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/db"
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
+	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
-func GetUser(w http.ResponseWriter, r *http.Request) {
+func GetUser(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	log.Infof("Received request: %s %s", r.Method, r.URL.Path)
 
 	email := "johannes.esbjornsson@gmail.com"
@@ -23,9 +23,8 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-func CreateOrUpdateUser(w http.ResponseWriter, r *http.Request) {
+func CreateOrUpdateUser(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	log.Infof("Received request: %s %s", r.Method, r.URL.Path)
-
 
 	var input models.User
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -41,4 +40,3 @@ func CreateOrUpdateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(input)
 }
-

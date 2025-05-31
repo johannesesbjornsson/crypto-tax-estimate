@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL CHECK (length(trim(email)) > 0),
     name TEXT,
     tax_start_day INT CHECK (tax_start_day BETWEEN 1 AND 31),
     tax_start_month INT CHECK (tax_start_month BETWEEN 1 AND 12),

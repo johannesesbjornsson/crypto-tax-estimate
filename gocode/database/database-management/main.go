@@ -7,9 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
-  "path/filepath"
-  "sort"
 )
 
 func main() {

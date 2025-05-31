@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import 'react-datepicker/dist/react-datepicker.css';
 
 export default function UserProfile({ }) {
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isError, setIsError] = useState(false);
   const [user, setUser] = useState({ 
     name: '', 
     email: '', 
@@ -42,17 +44,18 @@ export default function UserProfile({ }) {
     try {
       const response = await fetch('/v1/user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(user),
       });
 
       if (!response.ok) throw new Error('Failed to save user data');
-      alert('Settings saved successfully');
+      setSuccessMessage('✅ Settings saved');
+      setTimeout(() => setSuccessMessage(''), 3000); // clear after 3s
+      setIsError(false);
     } catch (error) {
       console.error('Save failed:', error);
-      alert('Error saving settings');
+      setSuccessMessage('❌ Failed to save settings');
+      setIsError(true);
     }
   };
 
@@ -114,7 +117,12 @@ export default function UserProfile({ }) {
           <option value="JPY">JPY</option>
         </select>
       </div>
-      <div style={{ textAlign: 'right', marginTop: '20px' }}>
+      <div className="save-row">
+        {successMessage && (
+          <span className={`save-message ${isError ? 'error' : 'success'}`}>
+            {successMessage}
+          </span>
+        )}
         <button onClick={handleSave}>Save</button>
       </div>
     </div>
