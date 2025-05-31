@@ -14,7 +14,7 @@ export default function UserProfile({ name, email, currency }) {
   useEffect(() => {
     async function fetchUserData() {
       try {
-        const response = await fetch('/api/user'); // Adjust URL accordingly
+        const response = await fetch('/v1/user'); // Adjust URL accordingly
         if (!response.ok) throw new Error('Network response error');
         const data = await response.json();
         setUser(data);
@@ -33,7 +33,7 @@ export default function UserProfile({ name, email, currency }) {
 
   const handleSave = async () => {
     try {
-      const response = await fetch('/api/user', {
+      const response = await fetch('/v1/user', {
         method: 'PUT', // or POST depending on your backend
         headers: {
           'Content-Type': 'application/json',
