@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import TransactionsPage from './components/TransactionsPage';
 
@@ -8,6 +8,13 @@ import UserProfile from './components/UserProfile';
 
 
 function App() {
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('activeTab') || 'Overview';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
   const tabs = {
     Overview: <div className="">Overview content</div>,
         Transactions: <TransactionsPage />,
@@ -18,7 +25,7 @@ function App() {
 
   return (
     <div className="">
-      <Tabs tabs={tabs} />
+      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 }
