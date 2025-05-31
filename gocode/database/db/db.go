@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"fmt"
 )
 
 type Database struct {
@@ -52,4 +53,34 @@ func (db *Database) CreateOrUpdateUser(user *models.User) error {
 	}
 
 	return db.DB.Create(user).Error
+}
+
+
+func (db *Database) GetTransactionsByEmail(email string) ([]models.Transaction, error) {
+	var user models.User
+	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+
+	var transactions []models.Transaction
+	if err := db.DB.
+		Where("user_id = ?", user.ID).
+		Order("date DESC").
+		Find(&transactions).Error; err != nil {
+		return nil, err
+	}
+
+	return transactions, nil
+}
+
+func (db *Database) CreateTransaction(tx *models.Transaction) error {
+	if tx == nil {
+		return fmt.Errorf("transaction cannot be nil")
+	}
+
+	if tx.UserID == 0 {
+		return fmt.Errorf("missing UserID on transaction")
+	}
+
+	return db.DB.Create(tx).Error
 }
