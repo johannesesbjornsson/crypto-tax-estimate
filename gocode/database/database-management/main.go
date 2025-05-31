@@ -52,11 +52,12 @@ func RunMigrations(db *sql.DB, migrationsDir string) error {
 			return err
 		}
 
-		log.Infof("🟡 Running migration: %s", file.Name())
 		if _, err := db.Exec(string(query)); err != nil {
 			log.Warnf("❌ Failed migration: %s. Error: %v", file.Name(), err)
+		} else {
+			log.Infof("✅ Completed migration: %s", file.Name())
 		}
-		log.Infof("✅ Completed migration: %s", file.Name())
+		
 	}
 
 	return nil

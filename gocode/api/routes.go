@@ -40,3 +40,21 @@ func CreateOrUpdateUser(db *db.Database, w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(input)
 }
+
+
+func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
+	log.Infof("Received request: %s %s", r.Method, r.URL.Path)
+
+  email := "johannes.esbjornsson@gmail.com"
+
+    transactions, err := db.GetTransactionsByEmail(email)
+    if err != nil {
+        log.Errorf("Error fetching transactions: %v", err)
+        http.Error(w, "Failed to retrieve transactions", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(transactions)
+
+}

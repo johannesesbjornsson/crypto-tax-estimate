@@ -1,35 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import 'react-datepicker/dist/react-datepicker.css';
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState([
-    { id: 1, date: '2024-05-01', description: 'Coffee', amount: -4.5 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-    { id: 2, date: '2024-05-02', description: 'Salary', amount: 2500 },
-  ]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch(`/v1/transactions`);
+        if (!response.ok) throw new Error('Failed to fetch transactions');
+        const data = await response.json();
+        setTransactions(data);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   const handleRightClick = (transaction, x, y) => {
     alert(`Right-clicked on: ${transaction.description} at (${x}, ${y})`);
-  // Or show a custom context menu here
   };
 
   return (
@@ -39,42 +33,43 @@ export default function TransactionsPage() {
         <button onClick={() => alert('Upload CSV Clicked')}>Upload CSV</button>
       </div>
       <div className="table-container">
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Description</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {transactions.map(tx => (
-               <tr
-                 key={tx.id}
-                 onContextMenu={(e) => {
-                   e.preventDefault();
-                   handleRightClick(tx, e.clientX, e.clientY);
-                 }}
-               >
-              <td>{tx.date}</td>
-              <td>{tx.description}</td>
-              <td>${tx.amount.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        {loading ? (
+          <p>Loading transactions...</p>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Venue</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Asset</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map(tx => (
+                <tr
+                  key={tx.id}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    handleRightClick(tx, e.clientX, e.clientY);
+                  }}
+                >
+                  <td>{tx.date}</td>
+                  <td>{tx.description}</td>
+                  <td>{tx.venue}</td>
+                  <td>{tx.type}</td>
+                  <td>${tx.amount.toFixed(2)}</td>
+                  <td>{tx.asset}</td>
+                  <td>{tx.source}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 }
-
-const thStyle = {
-  textAlign: 'left',
-  padding: '8px',
-  borderBottom: '2px solid #ccc',
-};
-
-const tdStyle = {
-  padding: '8px',
-  borderBottom: '1px solid #eee',
-};

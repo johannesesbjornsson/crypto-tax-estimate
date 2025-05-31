@@ -53,3 +53,21 @@ func (db *Database) CreateOrUpdateUser(user *models.User) error {
 
 	return db.DB.Create(user).Error
 }
+
+
+func (db *Database) GetTransactionsByEmail(email string) ([]models.Transaction, error) {
+	var user models.User
+	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+
+	var transactions []models.Transaction
+	if err := db.DB.
+		Where("user_id = ?", user.ID).
+		Order("date DESC").
+		Find(&transactions).Error; err != nil {
+		return nil, err
+	}
+
+	return transactions, nil
+}
