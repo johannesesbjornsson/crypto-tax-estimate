@@ -20,6 +20,10 @@
   margin-bottom: 16px;
 }
 
+.date-separator {
+  padding: 0 4px;
+  font-weight: bold;
+}
 
 .transactions {
   max-width: 1000px;
