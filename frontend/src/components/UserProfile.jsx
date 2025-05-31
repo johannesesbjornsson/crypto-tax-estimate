@@ -6,17 +6,25 @@ export default function UserProfile({ }) {
     name: '', 
     email: '', 
     currency: '',
-    taxStartDate: '',
-    taxEndDate: ''
+    taxStartDay: 1,
+    taxStartMonth: 1,
+    taxEndDay: 1,
+    taxEndMonth: 1,
   });
 
   useEffect(() => {
     async function fetchUserData() {
       try {
-        const response = await fetch('/v1/user'); // Adjust URL accordingly
+        const response = await fetch('/v1/user');
         if (!response.ok) throw new Error('Network response error');
         const data = await response.json();
-        setUser(data);
+        setUser({
+          ...data,
+          taxStartDay: data.taxStartDay || 1,
+          taxStartMonth: data.taxStartMonth || 1,
+          taxEndDay: data.taxEndDay || 1,
+          taxEndMonth: data.taxEndMonth || 1,
+        });
       } catch (error) {
         console.error('Error fetching user data:', error);
       }
@@ -27,13 +35,13 @@ export default function UserProfile({ }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUser(prev => ({ ...prev, [name]: value }));
+    setUser(prev => ({ ...prev, [name]: parseInt(value) || value }));
   };
 
   const handleSave = async () => {
     try {
       const response = await fetch('/v1/user', {
-        method: 'PUT', // or POST depending on your backend
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -52,7 +60,7 @@ export default function UserProfile({ }) {
     <div className="settings">
       <div className="setting-row">
         <span className="setting-label">Email:</span>
-        <span className="setting-value">{user.email}</span>
+        <span className="setting-value">{user.email || '\u00A0'}</span>
       </div>
       <div className="setting-row">
         <span className="setting-label">Name:</span>
@@ -66,7 +74,6 @@ export default function UserProfile({ }) {
       </div>
       <div className="setting-row">
         <span className="setting-label">Tax Start Date:</span>
-        
         <select className="setting-value" name="taxStartDay" value={user.taxStartDay} onChange={handleChange}>
           {Array.from({ length: 31 }, (_, i) => (
             <option key={i+1} value={i+1}>{i+1}</option>
@@ -97,6 +104,7 @@ export default function UserProfile({ }) {
         <span className="setting-label">Currency:</span>
         <select
           className="setting-value"
+          name="currency"
           value={user.currency}
           onChange={handleChange}
         >

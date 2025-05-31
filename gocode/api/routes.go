@@ -9,12 +9,12 @@ import (
 )
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
-
 	log.Infof("Received request: %s %s", r.Method, r.URL.Path)
-	conn := db.InitDB()
-	var user models.User
 
-	if err := conn.First(&user).Error; err != nil {
+	email := "johannes.esbjornsson@gmail.com"
+
+	user, err := db.GetUserByEmail(email)
+	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
@@ -22,3 +22,23 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
+
+func CreateOrUpdateUser(w http.ResponseWriter, r *http.Request) {
+	log.Infof("Received request: %s %s", r.Method, r.URL.Path)
+
+
+	var input models.User
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := db.CreateOrUpdateUser(&input); err != nil {
+		http.Error(w, "Failed to save user", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(input)
+}
+

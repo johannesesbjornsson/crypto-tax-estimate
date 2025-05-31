@@ -14,6 +14,7 @@ func main() {
 	})
 
 	r.HandleFunc("/v1/user", GetUser).Methods("GET")
+	r.HandleFunc("/v1/user", CreateOrUpdateUser).Methods("POST")
 
 	log.Infof("Listening on port 8080")
 	http.ListenAndServe(":8080", r)
