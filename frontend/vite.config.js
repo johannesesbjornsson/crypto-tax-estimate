@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   server: mode === 'development' ? {
     proxy: {
-      '/api': 'http://localhost:3001',
+      '/v1': 'http://localhost:8080',
     },
   } : {},
 }));
