@@ -33,6 +33,9 @@ func main() {
 	r.HandleFunc("/v1/transactions/upload", func(w http.ResponseWriter, r *http.Request) {
 		UploadCSV(db, w, r)
 	}).Methods("POST")
+	r.HandleFunc("/v1/transactions/upload", func(w http.ResponseWriter, r *http.Request) {
+		GetFileUploads(db, w, r)
+	}).Methods("GET")
 
 	log.Infof("Listening on port 8080")
 	http.ListenAndServe(":8080", r)

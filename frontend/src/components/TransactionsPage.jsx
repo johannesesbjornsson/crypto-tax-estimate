@@ -3,12 +3,14 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
+  const [fileUploads, setFileUploads] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [formErrorMessage, setFormErrorMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showCSVForm, setShowCSVForm] = useState(false);
+  const [showUploads, setShowUploads] = useState(false);
   const [formData, setFormData] = useState({
     date: '',
     description: '',
@@ -21,12 +23,18 @@ export default function TransactionsPage() {
   const [csvDescription, setCsvDescription] = useState('');
 
   useEffect(() => {
-    const fetchTransactions = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/v1/transactions`);
-        if (!response.ok) throw new Error('Failed to fetch transactions');
-        const data = await response.json();
-        setTransactions(data);
+        const txRes = await fetch('/v1/transactions');
+        const uploadRes = await fetch('/v1/transactions/upload');
+
+        if (!txRes.ok || !uploadRes.ok) throw new Error('Failed to fetch data');
+
+        const txData = await txRes.json();
+        const fileData = await uploadRes.json();
+
+        setTransactions(Array.isArray(txData) ? txData : []);
+        setFileUploads(Array.isArray(fileData) ? fileData : []);
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -34,7 +42,7 @@ export default function TransactionsPage() {
       }
     };
 
-    fetchTransactions();
+    fetchData();
   }, []);
 
   const handleRightClick = (transaction, x, y) => {
@@ -93,8 +101,12 @@ export default function TransactionsPage() {
       });
 
       if (!res.ok) throw new Error('Failed to upload CSV');
-      const updated = await fetch('/v1/transactions').then(r => r.json());
-      setTransactions(updated);
+
+      const updatedTx = await fetch('/v1/transactions').then(r => r.json());
+      const updatedUploads = await fetch('/v1/transactions/upload').then(r => r.json());
+
+      setTransactions(Array.isArray(updatedTx) ? updatedTx : []);
+      setFileUploads(Array.isArray(updatedUploads) ? updatedUploads : []);
 
       setCsvFile(null);
       setCsvDescription('');
@@ -193,7 +205,41 @@ export default function TransactionsPage() {
         </div>
       )}
 
+      {/* Toggle Button for Uploaded Files */}
+      {!loading && fileUploads.length > 0 && (
+        <div className="tab-actions">
+          <button onClick={() => setShowUploads(prev => !prev)}>
+            {showUploads ? 'Hide Uploaded Files' : 'Show Uploaded Files'}
+          </button>
+        </div>
+      )}
+
+      {/* Uploaded Files Table */}
+      {showUploads && !loading && fileUploads.length > 0 && (
+        <div className="table-container" style={{ marginBottom: '4rem' }}>
+          <h3>Uploaded Files</h3>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Uploaded At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fileUploads.map(file => (
+                <tr key={file.id}>
+                  <td>{file.name}</td>
+                  <td>{new Date(file.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Transactions Table */}
       <div className="table-container">
+        <h3>Transactions</h3>
         {loading ? (
           <p>Loading transactions...</p>
         ) : (
