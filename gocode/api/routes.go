@@ -59,6 +59,7 @@ func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	var tx models.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&tx); err != nil {
+		log.Errorf("Failed to decode transaction JSON: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}

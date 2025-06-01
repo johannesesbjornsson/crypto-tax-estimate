@@ -64,6 +64,7 @@ export default function TransactionsPage() {
         body: JSON.stringify({
           ...formData,
           amount: parseFloat(formData.amount),
+          price: parseFloat(formData.price),
           date: new Date(formData.date).toISOString(),
         }),
       });
