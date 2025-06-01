@@ -55,17 +55,25 @@ func (db *Database) CreateOrUpdateUser(user *models.User) error {
 	return db.DB.Create(user).Error
 }
 
-func (db *Database) GetTransactionsByEmail(email string) ([]models.Transaction, error) {
+func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]models.Transaction, error) {
 	var user models.User
 	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 
 	var transactions []models.Transaction
-	if err := db.DB.
+	query := db.DB.
 		Where("user_id = ?", user.ID).
-		Order("date DESC").
-		Find(&transactions).Error; err != nil {
+		Order("date DESC")
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	if err := query.Find(&transactions).Error; err != nil {
 		return nil, err
 	}
 
@@ -82,4 +90,30 @@ func (db *Database) CreateTransaction(tx *models.Transaction) error {
 	}
 
 	return db.DB.Create(tx).Error
+}
+
+func (db *Database) GetFileUploadsByUserID(userID uint) ([]models.FileUploads, error) {
+	if userID == 0 {
+		return nil, fmt.Errorf("userID must be non-zero")
+	}
+
+	var uploads []models.FileUploads
+	err := db.DB.Where("user_id = ?", userID).Order("created_at desc").Find(&uploads).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch file uploads: %w", err)
+	}
+
+	return uploads, nil
+}
+
+func (db *Database) CreateFileUpload(fu *models.FileUploads) error {
+	if fu == nil {
+		return fmt.Errorf("file upload cannot be nil")
+	}
+
+	if fu.UserID == 0 {
+		return fmt.Errorf("missing UserID on file upload")
+	}
+
+	return db.DB.Create(fu).Error
 }

@@ -71,6 +71,7 @@
   overflow-y: auto;       /* Enable vertical scroll */
   border-radius: 8px;     /* Rounded corners */
   border: 2px solid #ccc; /* Outer border */
+  margin-bottom: 4rem;
   
 }
 

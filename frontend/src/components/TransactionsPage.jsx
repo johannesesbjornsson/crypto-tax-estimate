@@ -3,12 +3,18 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
+  const [fileUploads, setFileUploads] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [formErrorMessage, setFormErrorMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showCSVForm, setShowCSVForm] = useState(false);
+  const [showUploads, setShowUploads] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 100;
+  const [hasMore, setHasMore] = useState(false);
+
   const [formData, setFormData] = useState({
     date: '',
     description: '',
@@ -21,12 +27,22 @@ export default function TransactionsPage() {
   const [csvDescription, setCsvDescription] = useState('');
 
   useEffect(() => {
-    const fetchTransactions = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/v1/transactions`);
-        if (!response.ok) throw new Error('Failed to fetch transactions');
-        const data = await response.json();
-        setTransactions(data);
+        setLoading(true);
+        const offset = (page - 1) * limit;
+
+        const txRes = await fetch(`/v1/transactions?limit=${limit}&offset=${offset}`);
+        const uploadRes = await fetch('/v1/transactions/upload');
+
+        if (!txRes.ok || !uploadRes.ok) throw new Error('Failed to fetch data');
+
+        const txData = await txRes.json();
+        const fileData = await uploadRes.json();
+
+        setTransactions(Array.isArray(txData) ? txData : []);
+        setFileUploads(Array.isArray(fileData) ? fileData : []);
+        setHasMore(txData.length === limit);
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -34,8 +50,8 @@ export default function TransactionsPage() {
       }
     };
 
-    fetchTransactions();
-  }, []);
+    fetchData();
+  }, [page]);
 
   const handleRightClick = (transaction, x, y) => {
     alert(`Right-clicked on: ${transaction.description} at (${x}, ${y})`);
@@ -56,12 +72,13 @@ export default function TransactionsPage() {
         body: JSON.stringify({
           ...formData,
           amount: parseFloat(formData.amount),
+          price: parseFloat(formData.price),
           date: new Date(formData.date).toISOString(),
         }),
       });
       if (!res.ok) throw new Error('Failed to add transaction');
       const updated = await res.json();
-      setTransactions(prev => [...prev, updated]);
+      setTransactions(prev => [updated, ...prev]);
       setFormData({ date: '', description: '', price: '', type: 'Buy', amount: '', asset: '' });
       setShowForm(false);
       setSuccessMessage('✅ Transaction added');
@@ -93,8 +110,6 @@ export default function TransactionsPage() {
       });
 
       if (!res.ok) throw new Error('Failed to upload CSV');
-      const updated = await fetch('/v1/transactions').then(r => r.json());
-      setTransactions(updated);
 
       setCsvFile(null);
       setCsvDescription('');
@@ -102,6 +117,8 @@ export default function TransactionsPage() {
       setSuccessMessage('✅ CSV uploaded successfully');
       setIsError(false);
       setTimeout(() => setSuccessMessage(''), 3000);
+
+      setPage(1); // reset to first page after upload
     } catch (error) {
       console.error('CSV upload failed:', error);
       setFormErrorMessage('❌ Failed to upload CSV');
@@ -193,37 +210,75 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      <div className="table-container">
-        {loading ? (
-          <p>Loading transactions...</p>
-        ) : (
+      {!loading && fileUploads.length > 0 && (
+        <div className="tab-actions">
+          <button onClick={() => setShowUploads(prev => !prev)}>
+            {showUploads ? 'Hide Uploaded Files' : 'Show Uploaded Files'}
+          </button>
+        </div>
+      )}
+
+      {showUploads && !loading && fileUploads.length > 0 && (
+        <div className="table-container" style={{ marginBottom: '4rem' }}>
+          <h3>Uploaded Files</h3>
           <table className="table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Price</th>
-                <th>Asset</th>
+                <th>Filename</th>
+                <th>Uploaded At</th>
               </tr>
             </thead>
             <tbody>
-              {transactions.map(tx => (
-                <tr key={tx.id} onContextMenu={(e) => {
-                  e.preventDefault();
-                  handleRightClick(tx, e.clientX, e.clientY);
-                }}>
-                  <td>{tx.date}</td>
-                  <td>{tx.description}</td>
-                  <td>{tx.type}</td>
-                  <td>{tx.amount.toFixed(10)}</td>
-                  <td>{tx.price.toFixed(5)}</td>
-                  <td>{tx.asset}</td>
+              {fileUploads.map(file => (
+                <tr key={file.id}>
+                  <td>{file.name}</td>
+                  <td>{new Date(file.created_at).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      <div className="table-container">
+        <h3>Transactions</h3>
+        {loading ? (
+          <p>Loading transactions...</p>
+        ) : (
+          <>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Price</th>
+                  <th>Asset</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map(tx => (
+                  <tr key={tx.id} onContextMenu={(e) => {
+                    e.preventDefault();
+                    handleRightClick(tx, e.clientX, e.clientY);
+                  }}>
+                    <td>{tx.date}</td>
+                    <td>{tx.description}</td>
+                    <td>{tx.type}</td>
+                    <td>{tx.amount.toFixed(10)}</td>
+                    <td>{tx.price.toFixed(5)}</td>
+                    <td>{tx.asset}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: '1rem' }}>
+              <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>Previous</button>
+              <span style={{ margin: '0 1rem' }}>Page {page}</span>
+              <button onClick={() => setPage(p => p + 1)} disabled={!hasMore}>Next</button>
+            </div>
+          </>
         )}
       </div>
     </div>

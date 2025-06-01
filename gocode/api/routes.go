@@ -46,7 +46,24 @@ func CreateOrUpdateUser(db *db.Database, w http.ResponseWriter, r *http.Request)
 
 func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	email := "johannes.esbjornsson@gmail.com"
-	transactions, err := db.GetTransactionsByEmail(email)
+
+	// Parse query parameters
+	limit := 100
+	offset := 0
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsedLimit, err := strconv.Atoi(l); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsedOffset, err := strconv.Atoi(o); err == nil && parsedOffset >= 0 {
+			offset = parsedOffset
+		}
+	}
+
+	transactions, err := db.GetTransactionsByEmail(email, limit, offset)
 	if err != nil {
 		http.Error(w, "Failed to retrieve transactions", http.StatusInternalServerError)
 		return
@@ -59,6 +76,7 @@ func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	var tx models.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&tx); err != nil {
+		log.Errorf("Failed to decode transaction JSON: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -88,13 +106,29 @@ func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(tx)
 }
 
+func GetFileUploads(db *db.Database, w http.ResponseWriter, r *http.Request) {
+	user, err := db.GetUserByEmail("johannes.esbjornsson@gmail.com") // Or use auth context
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	uploads, err := db.GetFileUploadsByUserID(user.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(uploads)
+}
+
 func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "Unable to parse form", http.StatusBadRequest)
 		return
 	}
 
-	file, _, err := r.FormFile("file")
+	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Unable to retrieve file", http.StatusBadRequest)
 		return
@@ -117,6 +151,18 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	user, err := db.GetUserByEmail("johannes.esbjornsson@gmail.com")
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	fileUpload := models.FileUploads{
+		Name:        fileHeader.Filename,
+		UserID:      user.ID,
+		Description: description,
+		CreatedAt:   time.Now(),
+	}
+
+	if err := db.CreateFileUpload(&fileUpload); err != nil {
+		http.Error(w, "Failed to record file upload", http.StatusInternalServerError)
 		return
 	}
 
