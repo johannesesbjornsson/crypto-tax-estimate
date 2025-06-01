@@ -10,11 +10,10 @@ type Transaction struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 	Date        time.Time `gorm:"not null" json:"date"`
 	Description string    `gorm:"type:varchar(100)" json:"description,omitempty"`
-	Venue       string    `gorm:"not null" json:"venue"`                         
-	Source      string    `gorm:"not null" json:"source"`                         
+	Source      string    `gorm:"not null" json:"source"`
 	Type        string    `gorm:"type:enum('Income','Buy','Sell','Lost');not null" json:"type"`
 	Amount      float64   `gorm:"not null" json:"amount"`
+	Price       float64   `gorm:"not null" json:"price"`
 	Asset       string    `gorm:"not null" json:"asset"`
 	UserID      uint      `gorm:"not null" json:"user_id"`
-
 }
