@@ -57,7 +57,7 @@ func RunMigrations(db *sql.DB, migrationsDir string) error {
 		} else {
 			log.Infof("✅ Completed migration: %s", file.Name())
 		}
-		
+
 	}
 
 	return nil

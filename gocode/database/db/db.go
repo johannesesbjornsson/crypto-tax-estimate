@@ -2,11 +2,11 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"fmt"
 )
 
 type Database struct {
@@ -54,7 +54,6 @@ func (db *Database) CreateOrUpdateUser(user *models.User) error {
 
 	return db.DB.Create(user).Error
 }
-
 
 func (db *Database) GetTransactionsByEmail(email string) ([]models.Transaction, error) {
 	var user models.User
