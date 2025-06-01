@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE INDEX idx_transactions_user_id ON transactions(user_id);
+
 CREATE TRIGGER set_transaction_timestamp
 BEFORE UPDATE ON transactions
 FOR EACH ROW

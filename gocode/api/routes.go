@@ -63,14 +63,22 @@ func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	transactions, err := db.GetTransactionsByEmail(email, limit, offset)
+	transactions, totalPages, err := db.GetTransactionsByEmail(email, limit, offset)
 	if err != nil {
 		http.Error(w, "Failed to retrieve transactions", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(transactions)
+	response := struct {
+		Transactions []models.Transaction `json:"transactions"`
+		TotalPages   int                  `json:"totalPages"`
+	}{
+		Transactions: transactions,
+		TotalPages:   totalPages,
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.Request) {
