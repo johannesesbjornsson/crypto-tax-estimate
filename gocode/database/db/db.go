@@ -55,17 +55,25 @@ func (db *Database) CreateOrUpdateUser(user *models.User) error {
 	return db.DB.Create(user).Error
 }
 
-func (db *Database) GetTransactionsByEmail(email string) ([]models.Transaction, error) {
+func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]models.Transaction, error) {
 	var user models.User
 	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 
 	var transactions []models.Transaction
-	if err := db.DB.
+	query := db.DB.
 		Where("user_id = ?", user.ID).
-		Order("date DESC").
-		Find(&transactions).Error; err != nil {
+		Order("date DESC")
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	if err := query.Find(&transactions).Error; err != nil {
 		return nil, err
 	}
 

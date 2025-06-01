@@ -11,6 +11,10 @@ export default function TransactionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showCSVForm, setShowCSVForm] = useState(false);
   const [showUploads, setShowUploads] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 100;
+  const [hasMore, setHasMore] = useState(false);
+
   const [formData, setFormData] = useState({
     date: '',
     description: '',
@@ -25,7 +29,10 @@ export default function TransactionsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const txRes = await fetch('/v1/transactions');
+        setLoading(true);
+        const offset = (page - 1) * limit;
+
+        const txRes = await fetch(`/v1/transactions?limit=${limit}&offset=${offset}`);
         const uploadRes = await fetch('/v1/transactions/upload');
 
         if (!txRes.ok || !uploadRes.ok) throw new Error('Failed to fetch data');
@@ -35,6 +42,7 @@ export default function TransactionsPage() {
 
         setTransactions(Array.isArray(txData) ? txData : []);
         setFileUploads(Array.isArray(fileData) ? fileData : []);
+        setHasMore(txData.length === limit);
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -43,7 +51,7 @@ export default function TransactionsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [page]);
 
   const handleRightClick = (transaction, x, y) => {
     alert(`Right-clicked on: ${transaction.description} at (${x}, ${y})`);
@@ -70,7 +78,7 @@ export default function TransactionsPage() {
       });
       if (!res.ok) throw new Error('Failed to add transaction');
       const updated = await res.json();
-      setTransactions(prev => [...prev, updated]);
+      setTransactions(prev => [updated, ...prev]);
       setFormData({ date: '', description: '', price: '', type: 'Buy', amount: '', asset: '' });
       setShowForm(false);
       setSuccessMessage('✅ Transaction added');
@@ -103,18 +111,14 @@ export default function TransactionsPage() {
 
       if (!res.ok) throw new Error('Failed to upload CSV');
 
-      const updatedTx = await fetch('/v1/transactions').then(r => r.json());
-      const updatedUploads = await fetch('/v1/transactions/upload').then(r => r.json());
-
-      setTransactions(Array.isArray(updatedTx) ? updatedTx : []);
-      setFileUploads(Array.isArray(updatedUploads) ? updatedUploads : []);
-
       setCsvFile(null);
       setCsvDescription('');
       setShowCSVForm(false);
       setSuccessMessage('✅ CSV uploaded successfully');
       setIsError(false);
       setTimeout(() => setSuccessMessage(''), 3000);
+
+      setPage(1); // reset to first page after upload
     } catch (error) {
       console.error('CSV upload failed:', error);
       setFormErrorMessage('❌ Failed to upload CSV');
@@ -206,7 +210,6 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* Toggle Button for Uploaded Files */}
       {!loading && fileUploads.length > 0 && (
         <div className="tab-actions">
           <button onClick={() => setShowUploads(prev => !prev)}>
@@ -215,7 +218,6 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* Uploaded Files Table */}
       {showUploads && !loading && fileUploads.length > 0 && (
         <div className="table-container" style={{ marginBottom: '4rem' }}>
           <h3>Uploaded Files</h3>
@@ -238,39 +240,45 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* Transactions Table */}
       <div className="table-container">
         <h3>Transactions</h3>
         {loading ? (
           <p>Loading transactions...</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Price</th>
-                <th>Asset</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map(tx => (
-                <tr key={tx.id} onContextMenu={(e) => {
-                  e.preventDefault();
-                  handleRightClick(tx, e.clientX, e.clientY);
-                }}>
-                  <td>{tx.date}</td>
-                  <td>{tx.description}</td>
-                  <td>{tx.type}</td>
-                  <td>{tx.amount.toFixed(10)}</td>
-                  <td>{tx.price.toFixed(5)}</td>
-                  <td>{tx.asset}</td>
+          <>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Price</th>
+                  <th>Asset</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {transactions.map(tx => (
+                  <tr key={tx.id} onContextMenu={(e) => {
+                    e.preventDefault();
+                    handleRightClick(tx, e.clientX, e.clientY);
+                  }}>
+                    <td>{tx.date}</td>
+                    <td>{tx.description}</td>
+                    <td>{tx.type}</td>
+                    <td>{tx.amount.toFixed(10)}</td>
+                    <td>{tx.price.toFixed(5)}</td>
+                    <td>{tx.asset}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: '1rem' }}>
+              <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>Previous</button>
+              <span style={{ margin: '0 1rem' }}>Page {page}</span>
+              <button onClick={() => setPage(p => p + 1)} disabled={!hasMore}>Next</button>
+            </div>
+          </>
         )}
       </div>
     </div>

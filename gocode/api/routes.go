@@ -46,7 +46,24 @@ func CreateOrUpdateUser(db *db.Database, w http.ResponseWriter, r *http.Request)
 
 func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	email := "johannes.esbjornsson@gmail.com"
-	transactions, err := db.GetTransactionsByEmail(email)
+
+	// Parse query parameters
+	limit := 100
+	offset := 0
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsedLimit, err := strconv.Atoi(l); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsedOffset, err := strconv.Atoi(o); err == nil && parsedOffset >= 0 {
+			offset = parsedOffset
+		}
+	}
+
+	transactions, err := db.GetTransactionsByEmail(email, limit, offset)
 	if err != nil {
 		http.Error(w, "Failed to retrieve transactions", http.StatusInternalServerError)
 		return
