@@ -6,6 +6,7 @@ const Form = ({
   handleFormChange,
   handleSubmit,
   formErrorMessage,
+  successMessage,
   setShowForm,
 }) => {
   return (
@@ -25,9 +26,7 @@ const Form = ({
                       onChange={handleFormChange}
                     >
                       {subField.options.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
+                        <option key={option} value={option}>{option}</option>
                       ))}
                     </select>
                   ) : (
@@ -49,7 +48,6 @@ const Form = ({
         return (
           <div key={field.name} className="setting-row">
             <span className="setting-label">{field.label}:</span>
-
             {field.type === 'display' ? (
               <span className="setting-value">{formData[field.name] || '\u00A0'}</span>
             ) : field.type === 'select' ? (
@@ -61,9 +59,7 @@ const Form = ({
                 required={field.required}
               >
                 {field.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
+                  <option key={option} value={option}>{option}</option>
                 ))}
               </select>
             ) : (
@@ -83,6 +79,9 @@ const Form = ({
       })}
 
       <div className="save-row">
+        {successMessage && (
+          <span className="save-message success">{successMessage}</span>
+        )}
         {formErrorMessage && (
           <span className="save-message error">{formErrorMessage}</span>
         )}
