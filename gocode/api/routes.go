@@ -7,7 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
-	
+	"encoding/csv"
+	"io"
+	"strconv"
+	"fmt"
 )
 
 func GetUser(db *db.Database, w http.ResponseWriter, r *http.Request) {
@@ -98,4 +101,69 @@ func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tx)
+}
+
+func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Unable to retrieve file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	// Skip header row
+	if _, err := reader.Read(); err != nil {
+		http.Error(w, "Invalid CSV header", http.StatusBadRequest)
+		return
+	}
+
+	var transactions []models.Transaction
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil || len(record) < 7 {
+			continue
+		}
+
+		date, _ := time.Parse("2006-01-02", record[0])
+		amount, _ := strconv.ParseFloat(record[4], 64)
+
+		tx := models.Transaction{
+			Date:        date,
+			Description: record[1],
+			Venue:       record[2],
+			Type:        record[3],
+			Amount:      amount,
+			Asset:       record[5],
+			Source:      record[6],
+		}
+
+		user, err := db.GetUserByEmail("johannes.esbjornsson@gmail.com") // or derive dynamically
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		tx.UserID = user.ID
+
+		transactions = append(transactions, tx)
+	}
+
+	for _, tx := range transactions {
+		if err := db.CreateTransaction(&tx); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to save: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("CSV upload successful"))
+
 }
