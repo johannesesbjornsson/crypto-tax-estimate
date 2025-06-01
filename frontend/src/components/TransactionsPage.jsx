@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import 'react-datepicker/dist/react-datepicker.css';
+import Form from './common/Form';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
@@ -136,6 +137,44 @@ export default function TransactionsPage() {
     setShowForm(false);
   };
 
+  const handleCSVFormChange = (e) => {
+  const { name, value, files } = e.target;
+  if (name === 'file') {
+    setCsvFile(files[0]);
+  } else if (name === 'description') {
+    setCsvDescription(value);
+  }
+};
+
+const csvFormData = {
+  file: csvFile,
+  description: csvDescription
+};
+
+  const fields = [
+  { name: 'date', label: 'Date', type: 'date', required: true },
+  { name: 'description', label: 'Description', type: 'text' },
+  { name: 'type', label: 'Type', type: 'select', options: ['Income', 'Buy', 'Sell', 'Lost'] },
+  { name: 'amount', label: 'Amount', type: 'number', step: '0.01', required: true },
+  { name: 'price', label: 'Price', type: 'number', step: '0.01', required: true },
+  { name: 'asset', label: 'Asset', type: 'text', required: true },
+];
+
+  const csvFormFields = [
+    {
+      name: 'file',
+      label: 'File',
+      type: 'file',
+      accept: '.csv',
+      required: true
+    },
+    {
+      name: 'description',
+      label: 'Description',
+      type: 'text',
+    }
+  ];
+
   return (
     <div className="transactions">
       <div className="tab-actions">
@@ -151,62 +190,28 @@ export default function TransactionsPage() {
 
       {showForm && (
         <div className="settings">
-          <form onSubmit={handleSubmit}>
-            <div className="setting-row">
-              <span className="setting-label">Date:</span>
-              <input className="setting-value" name="date" type="date" value={formData.date} onChange={handleFormChange} required />
-            </div>
-            <div className="setting-row">
-              <span className="setting-label">Description:</span>
-              <input className="setting-value" name="description" value={formData.description} onChange={handleFormChange} />
-            </div>
-            <div className="setting-row">
-              <span className="setting-label">Type:</span>
-              <select className="setting-value" name="type" value={formData.type} onChange={handleFormChange}>
-                <option>Income</option>
-                <option>Buy</option>
-                <option>Sell</option>
-                <option>Lost</option>
-              </select>
-            </div>
-            <div className="setting-row">
-              <span className="setting-label">Amount:</span>
-              <input className="setting-value" name="amount" type="number" step="0.01" value={formData.amount} onChange={handleFormChange} required />
-            </div>
-            <div className="setting-row">
-              <span className="setting-label">Price:</span>
-              <input className="setting-value" name="price" type="number" step="0.01" value={formData.price} onChange={handleFormChange} required />
-            </div>
-            <div className="setting-row">
-              <span className="setting-label">Asset:</span>
-              <input className="setting-value" name="asset" value={formData.asset} onChange={handleFormChange} required />
-            </div>
-            <div className="save-row">
-              {formErrorMessage && <span className="save-message error">{formErrorMessage}</span>}
-              <button type="submit">Save</button>
-              <button type="button" onClick={() => setShowForm(false)}>Cancel</button>
-            </div>
-          </form>
+
+          <Form
+            fields={fields}
+            formData={formData}
+            handleFormChange={handleFormChange}
+            handleSubmit={handleSubmit}
+            formErrorMessage={formErrorMessage}
+            setShowForm={setShowForm}
+          />
         </div>
       )}
 
       {showCSVForm && (
         <div className="settings">
-          <form onSubmit={handleCSVUpload}>
-            <div className="setting-row">
-              <span className="setting-label">File:</span>
-              <input className="setting-value" type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files[0])} required />
-            </div>
-            <div className="setting-row">
-              <span className="setting-label">Description:</span>
-              <input className="setting-value" type="text" value={csvDescription} onChange={(e) => setCsvDescription(e.target.value)} />
-            </div>
-            <div className="save-row">
-              {formErrorMessage && <span className="save-message error">{formErrorMessage}</span>}
-              <button type="submit">Upload</button>
-              <button type="button" onClick={() => setShowCSVForm(false)}>Cancel</button>
-            </div>
-          </form>
+          <Form
+            fields={csvFormFields}
+            formData={csvFormData}
+            handleFormChange={handleCSVFormChange}
+            handleSubmit={handleCSVUpload}
+            formErrorMessage={formErrorMessage}
+            setShowForm={setShowCSVForm}
+          />
         </div>
       )}
 
