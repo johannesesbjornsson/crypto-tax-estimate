@@ -15,7 +15,7 @@ export default function Tabs({ tabs }) {
               localStorage.setItem('activeTab', key);
               setActiveTab(key);
             }}
-            className={`px-4 py-2${key === activeTab ? ' active' : ''}`}
+            className={`${key === activeTab ? ' active' : ''}`}
           >
             {key}
           </button>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import 'react-datepicker/dist/react-datepicker.css';
 import Form from './common/Form';
+import Table from './common/Table';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
@@ -15,6 +16,7 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(1);
   const limit = 100;
   const [hasMore, setHasMore] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [formData, setFormData] = useState({
     date: '',
@@ -41,9 +43,10 @@ export default function TransactionsPage() {
         const txData = await txRes.json();
         const fileData = await uploadRes.json();
 
-        setTransactions(Array.isArray(txData) ? txData : []);
+        setTransactions(Array.isArray(txData.transactions) ? txData.transactions : []);
+        setTotalPages(txData.totalPages || 1);
+        setHasMore(page < txData.totalPages);
         setFileUploads(Array.isArray(fileData) ? fileData : []);
-        setHasMore(txData.length === limit);
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -119,7 +122,7 @@ export default function TransactionsPage() {
       setIsError(false);
       setTimeout(() => setSuccessMessage(''), 3000);
 
-      setPage(1); // reset to first page after upload
+      setPage(1);
     } catch (error) {
       console.error('CSV upload failed:', error);
       setFormErrorMessage('❌ Failed to upload CSV');
@@ -138,41 +141,40 @@ export default function TransactionsPage() {
   };
 
   const handleCSVFormChange = (e) => {
-  const { name, value, files } = e.target;
-  if (name === 'file') {
-    setCsvFile(files[0]);
-  } else if (name === 'description') {
-    setCsvDescription(value);
-  }
-};
+    const { name, value, files } = e.target;
+    if (name === 'file') {
+      setCsvFile(files[0]);
+    } else if (name === 'description') {
+      setCsvDescription(value);
+    }
+  };
 
-const csvFormData = {
-  file: csvFile,
-  description: csvDescription
-};
+  const csvFormData = {
+    file: csvFile,
+    description: csvDescription
+  };
 
   const fields = [
-  { name: 'date', label: 'Date', type: 'date', required: true },
-  { name: 'description', label: 'Description', type: 'text' },
-  { name: 'type', label: 'Type', type: 'select', options: ['Income', 'Buy', 'Sell', 'Lost'] },
-  { name: 'amount', label: 'Amount', type: 'number', step: '0.01', required: true },
-  { name: 'price', label: 'Price', type: 'number', step: '0.01', required: true },
-  { name: 'asset', label: 'Asset', type: 'text', required: true },
-];
+    { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'description', label: 'Description', type: 'text' },
+    { name: 'type', label: 'Type', type: 'select', options: ['Income', 'Buy', 'Sell', 'Lost'] },
+    { name: 'amount', label: 'Amount', type: 'number', step: '0.01', required: true },
+    { name: 'price', label: 'Price', type: 'number', step: '0.01', required: true },
+    { name: 'asset', label: 'Asset', type: 'text', required: true },
+  ];
 
   const csvFormFields = [
-    {
-      name: 'file',
-      label: 'File',
-      type: 'file',
-      accept: '.csv',
-      required: true
-    },
-    {
-      name: 'description',
-      label: 'Description',
-      type: 'text',
-    }
+    { name: 'file', label: 'File', type: 'file', accept: '.csv', required: true },
+    { name: 'description', label: 'Description', type: 'text' }
+  ];
+
+  const tableColumns = [
+    { key: 'date', label: 'Date' },
+    { key: 'description', label: 'Description' },
+    { key: 'type', label: 'Type' },
+    { key: 'amount', label: 'Amount', render: val => parseFloat(val).toFixed(10) },
+    { key: 'price', label: 'Price', render: val => parseFloat(val).toFixed(5) },
+    { key: 'asset', label: 'Asset' },
   ];
 
   return (
@@ -183,14 +185,13 @@ const csvFormData = {
       </div>
 
       {successMessage && !showForm && !showCSVForm && (
-        <div className={`save-message ${isError ? 'error' : 'success'}`} style={{ marginBottom: '1rem' }}>
+        <div className={`save-message ${isError ? 'error' : 'success'}`}>
           {successMessage}
         </div>
       )}
 
       {showForm && (
         <div className="settings">
-
           <Form
             fields={fields}
             formData={formData}
@@ -224,24 +225,15 @@ const csvFormData = {
       )}
 
       {showUploads && !loading && fileUploads.length > 0 && (
-        <div className="table-container" style={{ marginBottom: '4rem' }}>
+        <div className="table-container">
           <h3>Uploaded Files</h3>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Filename</th>
-                <th>Uploaded At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fileUploads.map(file => (
-                <tr key={file.id}>
-                  <td>{file.name}</td>
-                  <td>{new Date(file.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Table
+            columns={[
+              { key: 'name', label: 'Filename' },
+              { key: 'created_at', label: 'Uploaded At', render: val => new Date(val).toLocaleString() },
+            ]}
+            data={fileUploads}
+          />
         </div>
       )}
 
@@ -251,37 +243,21 @@ const csvFormData = {
           <p>Loading transactions...</p>
         ) : (
           <>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Price</th>
-                  <th>Asset</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map(tx => (
-                  <tr key={tx.id} onContextMenu={(e) => {
-                    e.preventDefault();
-                    handleRightClick(tx, e.clientX, e.clientY);
-                  }}>
-                    <td>{tx.date}</td>
-                    <td>{tx.description}</td>
-                    <td>{tx.type}</td>
-                    <td>{tx.amount.toFixed(10)}</td>
-                    <td>{tx.price.toFixed(5)}</td>
-                    <td>{tx.asset}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table
+              columns={tableColumns}
+              data={transactions}
+              onRowContextMenu={handleRightClick}
+            />
             <div style={{ marginTop: '1rem' }}>
-              <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>Previous</button>
-              <span style={{ margin: '0 1rem' }}>Page {page}</span>
-              <button onClick={() => setPage(p => p + 1)} disabled={!hasMore}>Next</button>
+              <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>
+                Previous
+              </button>
+              <span style={{ margin: '0 1rem' }}>
+                Page {page} of {totalPages}
+              </span>
+              <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>
+                Next
+              </button>
             </div>
           </>
         )}

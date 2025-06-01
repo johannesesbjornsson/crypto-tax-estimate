@@ -55,10 +55,17 @@ func (db *Database) CreateOrUpdateUser(user *models.User) error {
 	return db.DB.Create(user).Error
 }
 
-func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]models.Transaction, error) {
+func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]models.Transaction, int, error) {
 	var user models.User
 	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	var total int64
+	if err := db.DB.Model(&models.Transaction{}).
+		Where("user_id = ?", user.ID).
+		Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
 
 	var transactions []models.Transaction
@@ -74,10 +81,15 @@ func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]m
 	}
 
 	if err := query.Find(&transactions).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return transactions, nil
+	totalPages := 1
+	if limit > 0 {
+		totalPages = int((total + int64(limit) - 1) / int64(limit)) // ceiling division
+	}
+
+	return transactions, totalPages, nil
 }
 
 func (db *Database) CreateTransaction(tx *models.Transaction) error {
