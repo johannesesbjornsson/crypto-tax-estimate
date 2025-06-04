@@ -10,21 +10,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
 )
 
-type Transaction struct {
-	Date        time.Time
-	Type        string
-	Asset       string
-	Amount      float64
-	Price       float64
-	Source      string
-	RawNotes    string
-}
 
 type CSVParser interface {
 	HeadersMatch([]string) bool
-	ParseRecord([]string) (Transaction, error)
+	ParseRecord([]string) (models.Transaction, error)
 }
 
 func cleanHeader(s string) string {
@@ -34,6 +27,25 @@ func cleanHeader(s string) string {
   return strings.Trim(s, `"`)
 }
 
+var reAmountAndAsset = regexp.MustCompile(`^([0-9.]+)([A-Z]+)$`)
+
+func parseAmountAndAsset(input string) (float64, string) {
+	m := reAmountAndAsset.FindStringSubmatch(input)
+	if len(m) != 2 && len(m) != 3 {
+		log.Println("Failed to parse amount and asset from:", input)
+		return 0, ""
+	}
+	val, _ := strconv.ParseFloat(m[1], 64)
+	return val, m[2]
+}
+
+//func parsePair(input string) (string, string) {
+//	knownCurrencies := []string{
+//		"ADA" , "BUSD", "XRP", "USDC", "XLM", "SOL", "SHI", "ROSE", "MATIC", "BNB", "FTM", "DOT", "GBP",
+//	}
+//	return "", ""
+//
+//}
 // ------------------------------------
 // Binance Parser
 // ------------------------------------
@@ -41,21 +53,6 @@ func cleanHeader(s string) string {
 type BinanceParser struct{}
 
 func (b BinanceParser) HeadersMatch(h []string) bool {
-	fmt.Printf("Checking Binance headers: %v\n", h[0])
-	//fmt.Printf("Checking Binance headers: %v\n", h[1])
-	//fmt.Printf("Checking Binance headers: %v\n", h[2])
-	//fmt.Printf("Checking Binance headers: %v\n", h[3])
-	//fmt.Printf("Checking Binance headers: %v\n", h[4])
-	//fmt.Printf("Checking Binance headers: %v\n", h[5])
-	//fmt.Printf("Checking Binance headers: %v\n", h[6])
-	fmt.Printf("Checking Binance headers: %v\n", strings.EqualFold(cleanHeader(h[0]), "Date(UTC)"))
-	fmt.Printf("Checking Binance headers: %v\n", cleanHeader(h[0]))
-	//fmt.Printf("Checking Binance headers: %v\n", h[1])
-	//fmt.Printf("Checking Binance headers: %v\n", h[2])
-	//fmt.Printf("Checking Binance headers: %v\n", h[3])
-	//fmt.Printf("Checking Binance headers: %v\n", h[4])
-	//fmt.Printf("Checking Binance headers: %v\n", h[5])
-	//fmt.Printf("Checking Binance headers: %v\n", h[6])
 
 	return strings.EqualFold(cleanHeader(h[0]), "Date(UTC)") &&
     strings.EqualFold(cleanHeader(h[1]),   "Pair") &&
@@ -66,26 +63,31 @@ func (b BinanceParser) HeadersMatch(h []string) bool {
     strings.EqualFold(cleanHeader(h[6]),   "Fee")
 }
 
-//"Date(UTC)","Pair","Side","Price","Executed","Amount","Fee"
 
-
-func (b BinanceParser) ParseRecord(r []string) (Transaction, error) {
+func (b BinanceParser) ParseRecord(r []string) (models.Transaction, error) {
 	date, err := time.Parse("2006-01-02 15:04:05", r[0])
 	if err != nil {
-		return Transaction{}, err
+		return models.Transaction{}, err
 	}
-	log.Printf("Parsing Binance record: %v", r[4])
+	
 	amount, asset := parseAmountAndAsset(r[4])
+	_, quoteAsset := parseAmountAndAsset(r[5])
+
 	price, _ := strconv.ParseFloat(r[3], 64)
 
-	return Transaction{
-		Date:   date,
-		Type:   r[2],
-		Asset:  asset,
-		Amount: amount,
-		Price:  price,
-		Source: "Binance",
+
+	return models.Transaction{
+			Date:        date,
+			Description: "",
+			Type:        r[2],
+			Amount:      amount,
+			Price:       price,
+			Asset:       asset,
+			QuoteCurrency: quoteAsset,
+			Source:      "CSV Upload",
+			UserID:      1,
 	}, nil
+
 }
 
 // ------------------------------------
@@ -98,22 +100,24 @@ func (c CoinbaseParser) HeadersMatch(h []string) bool {
 	return len(h) > 6 && strings.EqualFold(h[0], "ID") && strings.Contains(h[1], "Timestamp")
 }
 
-func (c CoinbaseParser) ParseRecord(r []string) (Transaction, error) {
+func (c CoinbaseParser) ParseRecord(r []string) (models.Transaction, error) {
 	date, err := time.Parse("2006-01-02T15:04:05Z", r[1])
 	if err != nil {
-		return Transaction{}, err
+		return models.Transaction{}, err
 	}
 	amount, _ := strconv.ParseFloat(r[4], 64)
 	price, _ := strconv.ParseFloat(r[6], 64)
 
-	return Transaction{
-		Date:     date,
-		Type:     r[2],
-		Asset:    r[3],
-		Amount:   amount,
-		Price:    price,
-		Source:   "Coinbase",
-		RawNotes: r[10],
+	return models.Transaction{
+			Date:        date,
+			Description: "",
+			Type:        r[2],
+			Amount:      amount,
+			Price:       price,
+			Asset:       r[3],
+			QuoteCurrency: "USD",
+			Source:      "CSV Upload",
+			UserID:      1,
 	}, nil
 }
 
@@ -127,39 +131,26 @@ func (k KrakenParser) HeadersMatch(h []string) bool {
 	return len(h) > 9 && strings.EqualFold(h[0], "txid") && strings.EqualFold(h[2], "time")
 }
 
-func (k KrakenParser) ParseRecord(r []string) (Transaction, error) {
+func (k KrakenParser) ParseRecord(r []string) (models.Transaction, error) {
 	ts, err := strconv.ParseFloat(r[2], 64)
 	if err != nil {
-		return Transaction{}, err
+		return models.Transaction{}, err
 	}
 	date := time.Unix(int64(ts), 0)
 	amount, _ := strconv.ParseFloat(r[8], 64)
 
-	return Transaction{
+	return models.Transaction{
 		Date:     date,
+		Description: "",
 		Type:     r[3],
 		Asset:    r[6],
 		Amount:   amount,
 		Price:    0,
+		QuoteCurrency: "USD",
 		Source:   "Kraken",
-		RawNotes: r[4],
 	}, nil
 }
 
-// ------------------------------------
-// Helpers
-// ------------------------------------
-
-var re = regexp.MustCompile(`^([0-9.]+)([A-Z]+)$`)
-
-func parseAmountAndAsset(input string) (float64, string) {
-	m := re.FindStringSubmatch(input)
-	if len(m) != 3 {
-		return 0, ""
-	}
-	val, _ := strconv.ParseFloat(m[1], 64)
-	return val, m[2]
-}
 
 
 func detectParser(headers []string, parsers []CSVParser) (CSVParser, error) {
@@ -172,9 +163,6 @@ func detectParser(headers []string, parsers []CSVParser) (CSVParser, error) {
 	return nil, fmt.Errorf("unrecognized CSV format")
 }
 
-// ------------------------------------
-// Main
-// ------------------------------------
 
 func main() {
 	filePath := "/Users/johannesesbjornsson/Downloads/binance_2021-2022.csv"
