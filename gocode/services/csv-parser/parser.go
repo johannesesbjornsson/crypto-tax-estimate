@@ -3,24 +3,22 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
 	"log"
 	"os"
 	"strings"
-	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
 )
 
 type CSVParser interface {
-       HeadersMatch([]string) bool
-       ParseRecord([]string) (models.Transaction, error)
-			 ParseFile(*csv.Reader) ([]models.Transaction, error)
+	HeadersMatch([]string) bool
+	ParseFile(*csv.Reader) ([]models.Transaction, error)
 }
 
-
 func cleanHeader(s string) string {
-      if strings.HasPrefix(s, "\uFEFF") {
-              s = strings.TrimPrefix(s, "\uFEFF")
-      }
- 	return strings.Trim(s, `"`)
+	if strings.HasPrefix(s, "\uFEFF") {
+		s = strings.TrimPrefix(s, "\uFEFF")
+	}
+	return strings.Trim(s, `"`)
 }
 
 func detectParser(headers []string, parsers []CSVParser) (CSVParser, error) {
@@ -34,9 +32,10 @@ func detectParser(headers []string, parsers []CSVParser) (CSVParser, error) {
 }
 
 
+
 func main() {
-	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/binance_2021-2022.csv"
 	filePath := "/Users/johannesesbjornsson/workspace/personal-testing/binance_2021-2022.csv"
+	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/kraken_2023-2024.csv"
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -46,7 +45,7 @@ func main() {
 
 	reader := csv.NewReader(file)
 	reader.LazyQuotes = true
-	reader.FieldsPerRecord = -1
+	//reader.FieldsPerRecord = -1
 
 	headers, err := reader.Read()
 	if err != nil {
@@ -58,7 +57,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not detect CSV format: %v", err)
 	}
-
 
 	fmt.Printf("Detected format: %T\n", parser)
 	parser.ParseFile(reader)
