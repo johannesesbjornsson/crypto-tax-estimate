@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"encoding/csv"
-	"github.com/gocarina/gocsv"
+	//"github.com/gocarina/gocsv"
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
 	"io"
 )
