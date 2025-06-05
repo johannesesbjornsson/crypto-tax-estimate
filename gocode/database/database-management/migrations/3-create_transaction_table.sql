@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount NUMERIC NOT NULL,
     price NUMERIC NOT NULL,
     asset TEXT NOT NULL,
+    quote_currency TEXT NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 

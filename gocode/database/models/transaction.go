@@ -5,15 +5,16 @@ import (
 )
 
 type Transaction struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Date        time.Time `gorm:"not null" json:"date"`
-	Description string    `gorm:"type:varchar(100)" json:"description,omitempty"`
-	Source      string    `gorm:"not null" json:"source"`
-	Type        string    `gorm:"type:enum('Income','Buy','Sell','Lost');not null" json:"type"`
-	Amount      float64   `gorm:"not null" json:"amount"`
-	Price       float64   `gorm:"not null" json:"price"`
-	Asset       string    `gorm:"not null" json:"asset"`
-	UserID      uint      `gorm:"not null" json:"user_id"`
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	Date          time.Time `gorm:"not null" json:"date"`
+	Description   string    `gorm:"type:varchar(100)" json:"description,omitempty"`
+	Source        string    `gorm:"not null" json:"source"`
+	Type          string    `gorm:"type:enum('Income','Buy','Sell','Lost');not null" json:"type"`
+	Amount        float64   `gorm:"not null" json:"amount"`
+	Price         float64   `gorm:"not null" json:"price"`
+	Asset         string    `gorm:"not null" json:"asset"`
+	QuoteCurrency string    `gorm:"not null" json:"quote_currency"`
+	UserID        uint      `gorm:"not null" json:"user_id"`
 }
