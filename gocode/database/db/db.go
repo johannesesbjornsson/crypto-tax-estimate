@@ -71,7 +71,7 @@ func (db *Database) NewSimpleTransaction(base *models.BaseTransaction) (*models.
 	}, nil
 }
 
-func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]models.TradeTransaction, int, error) {
+func (db *Database) GetTradeTransactionsByEmail(email string, limit, offset int) ([]models.TradeTransaction, int, error) {
 	var user models.User
 	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, 0, err
@@ -85,6 +85,43 @@ func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]m
 	}
 
 	var transactions []models.TradeTransaction
+	query := db.DB.
+		Where("user_id = ?", user.ID).
+		Order("date DESC")
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	if err := query.Find(&transactions).Error; err != nil {
+		return nil, 0, err
+	}
+
+	totalPages := 1
+	if limit > 0 {
+		totalPages = int((total + int64(limit) - 1) / int64(limit)) // ceiling division
+	}
+
+	return transactions, totalPages, nil
+}
+
+func (db *Database) GetSimpleTransactionsByEmail(email string, limit, offset int) ([]models.SimpleTransaction, int, error) {
+	var user models.User
+	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var total int64
+	if err := db.DB.Model(&models.SimpleTransaction{}).
+		Where("user_id = ?", user.ID).
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var transactions []models.SimpleTransaction
 	query := db.DB.
 		Where("user_id = ?", user.ID).
 		Order("date DESC")
@@ -131,7 +168,6 @@ func (db *Database) CreateTradeTransaction(tx *models.TradeTransaction) error {
 
 	return db.DB.Create(tx).Error
 }
-
 
 func (db *Database) GetFileUploadsByUserID(userID uint) ([]models.FileUploads, error) {
 	if userID == 0 {

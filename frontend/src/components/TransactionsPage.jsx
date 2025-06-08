@@ -37,7 +37,7 @@ export default function TransactionsPage() {
         setLoading(true);
         const offset = (page - 1) * limit;
 
-        const txRes = await fetch(`/v1/transactions?limit=${limit}&offset=${offset}`);
+        const txRes = await fetch(`/v1/transactions?limit=${limit}&offset=${offset}&txType=trade`);
         const uploadRes = await fetch('/v1/transactions/upload');
 
         if (!txRes.ok || !uploadRes.ok) throw new Error('Failed to fetch data');

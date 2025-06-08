@@ -31,8 +31,6 @@ func detectParser(headers []string, parsers []CSVParser) (CSVParser, error) {
 	return nil, fmt.Errorf("unrecognized CSV format")
 }
 
-
-     
 func ParseCSV(file multipart.File) ([]models.SimpleTransaction, []models.TradeTransaction, error) {
 	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/binance_2021-2022.csv"
 	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/kraken_2023-2024.csv"

@@ -52,12 +52,12 @@ func (b BinanceParser) ParseTradeRecord(r []string) (models.TradeTransaction, er
 		Price:         price,
 		QuoteCurrency: quoteAsset,
 		BaseTransaction: models.BaseTransaction{
-			Date:          date,
-			Description:   "",
-			Amount:        amount,
-			Asset:         asset,
-			Source:        "CSV Upload",
-			UserID:        1,
+			Date:        date,
+			Description: "",
+			Amount:      amount,
+			Asset:       asset,
+			Source:      "CSV Upload",
+			UserID:      1,
 		},
 	}, nil
 

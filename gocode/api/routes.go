@@ -51,6 +51,7 @@ func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	limit := 100
 	offset := 0
+	txType := "trade"
 
 	if l := r.URL.Query().Get("limit"); l != "" {
 		if parsedLimit, err := strconv.Atoi(l); err == nil && parsedLimit > 0 {
@@ -64,21 +65,39 @@ func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	transactions, totalPages, err := db.GetTransactionsByEmail(email, limit, offset)
-	if err != nil {
-		http.Error(w, "Failed to retrieve transactions", http.StatusInternalServerError)
-		return
+	if o := r.URL.Query().Get("txType"); o != "" {
+		txType = o
 	}
+	var response interface{}
+	if txType == "trade" {
+		transactions, totalPages, err := db.GetTradeTransactionsByEmail(email, limit, offset)
+		if err != nil {
+			http.Error(w, "Failed to retrieve transactions", http.StatusInternalServerError)
+			return
+		}
+		response = struct {
+			Transactions []models.TradeTransaction `json:"transactions"`
+			TotalPages   int                       `json:"totalPages"`
+		}{
+			Transactions: transactions,
+			TotalPages:   totalPages,
+		}
+	} else if txType == "simple" {
+		transactions, totalPages, err := db.GetSimpleTransactionsByEmail(email, limit, offset)
+		if err != nil {
+			http.Error(w, "Failed to retrieve transactions", http.StatusInternalServerError)
+			return
+		}
 
+		response = struct {
+			Transactions []models.SimpleTransaction `json:"transactions"`
+			TotalPages   int                        `json:"totalPages"`
+		}{
+			Transactions: transactions,
+			TotalPages:   totalPages,
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
-	response := struct {
-		Transactions []models.TradeTransaction `json:"transactions"`
-		TotalPages   int                  `json:"totalPages"`
-	}{
-		Transactions: transactions,
-		TotalPages:   totalPages,
-	}
-
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -108,7 +127,7 @@ func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.R
 	tx.Type = strings.ToLower(tx.Type)
 
 	if tx.Type == "buy" || tx.Type == "sell" {
-		price, _ :=strconv.ParseFloat(r.FormValue("price"), 64)
+		price, _ := strconv.ParseFloat(r.FormValue("price"), 64)
 		tradeTx, _ := db.NewTradeTransaction(&tx, price, r.FormValue("quote_currency"))
 		if err := db.CreateTradeTransaction(tradeTx); err != nil {
 			http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
@@ -119,7 +138,7 @@ func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.R
 		if err := db.CreateSimpleTransaction(simpleTx); err != nil {
 			http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
 			return
-		}		
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -141,7 +160,6 @@ func GetFileUploads(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(uploads)
 }
-
 
 func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
@@ -165,7 +183,6 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Infof("Parsed %d trade transactions from CSV file %s", len(tradeTransactions), fileHeader.Filename)
-
 
 	fileUpload := models.FileUploads{
 		Name:        fileHeader.Filename,

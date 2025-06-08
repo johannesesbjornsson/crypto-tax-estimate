@@ -4,11 +4,11 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
+	"math"
 	"strconv"
 	"strings"
 	"time"
-	"log"
-	"math"
 
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
 )
@@ -96,13 +96,13 @@ func (k KrakenParser) ParseTradeRecord(recieve krakenGenericRecord, taken kraken
 		Type:          side,
 		Price:         math.Abs(taken.Amount) / recieve.Amount,
 		BaseTransaction: models.BaseTransaction{
-			Date:          recieve.Time,
-			ExternalID:    taken.Txid,
-			Description:   "",
-			Amount:        recieve.Amount,
-			Asset:         recieve.Asset,
-			Source:        "CSV Upload",
-			UserID:        1,
+			Date:        recieve.Time,
+			ExternalID:  taken.Txid,
+			Description: "",
+			Amount:      recieve.Amount,
+			Asset:       recieve.Asset,
+			Source:      "CSV Upload",
+			UserID:      1,
 		},
 	}, nil
 }
@@ -134,8 +134,8 @@ func (b KrakenParser) ParseFile(reader *csv.Reader) ([]models.SimpleTransaction,
 				continue
 			}
 			txs = append(txs, tx)
-			
-		}	
+
+		}
 	}
 
 	return []models.SimpleTransaction{}, txs, nil
