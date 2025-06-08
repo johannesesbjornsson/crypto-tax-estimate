@@ -4,9 +4,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
-	"log"
 	"mime/multipart"
 	"strings"
+	//"os"
+	log "github.com/sirupsen/logrus"
 )
 
 type CSVParser interface {
@@ -23,7 +24,6 @@ func cleanHeader(s string) string {
 
 func detectParser(headers []string, parsers []CSVParser) (CSVParser, error) {
 	for _, p := range parsers {
-		fmt.Printf("Checking parser: %T\n", p)
 		if p.HeadersMatch(headers) {
 			return p, nil
 		}
@@ -53,7 +53,7 @@ func ParseCSV(file multipart.File) ([]models.SimpleTransaction, []models.TradeTr
 	parsers := []CSVParser{BinanceParser{}, KrakenParser{}}
 	parser, err := detectParser(headers, parsers)
 	if err != nil {
-		log.Fatalf("Could not detect CSV format: %v", err)
+		log.Errorf("Could not detect CSV format: headers: %s | error %v", headers, err)
 	}
 
 	fmt.Printf("Detected format: %T\n", parser)
@@ -63,6 +63,7 @@ func ParseCSV(file multipart.File) ([]models.SimpleTransaction, []models.TradeTr
 }
 
 /*
+
 func main() {
 	filePath := "/Users/johannesesbjornsson/workspace/personal-testing/binance_2021-2022.csv"
 	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/kraken_2023-2024.csv"
@@ -72,7 +73,13 @@ func main() {
 		log.Fatalf("Failed to open file: %v", err)
 	}
 	defer file.Close()
-	ParseFile(file) // Call the ParseFile function to start parsing
+	simple, trade, _ := ParseCSV(file) // Call the ParseFile function to start parsing
 
+	for _, tx := range trade {
+		log.Infof("Parsed Trade Transaction: %+v", tx)
+	}
+	for _, tx := range simple {
+		log.Infof("Parsed Simple Transaction: %+v", tx)
+	}
 }
 */

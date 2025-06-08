@@ -175,14 +175,14 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 
 	description := r.FormValue("description")
 	file, fileHeader, err := r.FormFile("file")
-	_, tradeTransactions, err := csv_parser.ParseCSV(file)
+	simpleTransactions, tradeTransactions, err := csv_parser.ParseCSV(file)
 	if err != nil {
 		log.Errorf("Failed to parse CSV file: %v", err)
 		http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
 		return
 	}
 
-	log.Infof("Parsed %d trade transactions from CSV file %s", len(tradeTransactions), fileHeader.Filename)
+	log.Infof("Parsed %d trade transactions from CSV file %s", len(tradeTransactions)+len(simpleTransactions), fileHeader.Filename)
 
 	fileUpload := models.FileUploads{
 		Name:        fileHeader.Filename,
@@ -204,114 +204,10 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("CSV upload successful"))
-
-}
-
-/*
-func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		http.Error(w, "Unable to parse form", http.StatusBadRequest)
-		return
-	}
-
-	file, fileHeader, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "Unable to retrieve file", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	description := r.FormValue("description")
-
-	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1
-	reader.LazyQuotes = true
-	reader.TrimLeadingSpace = true
-
-	_, err = reader.Read() // Skip header
-	if err != nil {
-		http.Error(w, "Invalid CSV header", http.StatusBadRequest)
-		return
-	}
-
-	user, err := db.GetUserByEmail("johannes.esbjornsson@gmail.com")
-	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
-	}
-
-	fileUpload := models.FileUploads{
-		Name:        fileHeader.Filename,
-		UserID:      user.ID,
-		Description: description,
-		CreatedAt:   time.Now(),
-	}
-
-	if err := db.CreateFileUpload(&fileUpload); err != nil {
-		http.Error(w, "Failed to record file upload", http.StatusInternalServerError)
-		return
-	}
-
-	var transactions []models.TradeTransaction
-
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil || len(record) < 7 {
-			continue
-		}
-
-		date, err := time.Parse("2006-01-02 15:04:05", record[0])
-		if err != nil {
-			log.Warnf("Invalid date format: %v", record[0])
-			continue
-		}
-
-		amountField := record[4]
-		var amount float64
-		var asset string
-		var amountAssetRegexp = regexp.MustCompile(`^([0-9.]+)([A-Za-z]+)$`)
-
-		// Inside your loop
-		matches := amountAssetRegexp.FindStringSubmatch(amountField)
-		if len(matches) != 3 {
-			log.Warnf("Failed to parse amount and asset from: %q", amountField)
-			continue
-		}
-		amount, err = strconv.ParseFloat(matches[1], 64)
-		if err != nil {
-			log.Warnf("Invalid amount value: %q", matches[1])
-			continue
-		}
-		asset = matches[2]
-
-		price, err := strconv.ParseFloat(record[3], 64)
-		if err != nil {
-			log.Warnf("Invalid price: %v", record[3])
-			continue
-		}
-
-		tx := models.TradeTransaction{
-			Date:        date,
-			Description: description,
-			Type:        strings.Title(strings.ToLower(record[2])),
-			Amount:      amount,
-			Price:       price,
-			Asset:       asset,
-			Source:      "CSV Upload",
-			UserID:      user.ID,
-		}
-
-		transactions = append(transactions, tx)
-	}
-
-	for _, tx := range transactions {
-		if err := db.CreateTransaction(&tx); err != nil {
+	for _, tx := range simpleTransactions {
+		tx.Description = description
+		tx.Source = fileHeader.Filename
+		if err := db.CreateSimpleTransaction(&tx); err != nil {
 			http.Error(w, fmt.Sprintf("Failed to save: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -319,5 +215,5 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("CSV upload successful"))
+
 }
-*/

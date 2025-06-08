@@ -2,8 +2,8 @@ package csvparser
 
 import (
 	"encoding/csv"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,7 +19,7 @@ var reAmountAndAsset = regexp.MustCompile(`^([0-9.]+)([A-Z]+)$`)
 func parseAmountAndAsset(input string) (float64, string) {
 	m := reAmountAndAsset.FindStringSubmatch(input)
 	if len(m) != 2 && len(m) != 3 {
-		log.Println("Failed to parse amount and asset from:", input)
+		log.Infof("Failed to parse amount and asset from:", input)
 		return 0, ""
 	}
 	val, _ := strconv.ParseFloat(m[1], 64)
@@ -73,7 +73,7 @@ func (b BinanceParser) ParseFile(reader *csv.Reader) ([]models.SimpleTransaction
 
 		tx, err := b.ParseTradeRecord(record)
 		if err != nil {
-			log.Printf("Skipping row: %v", err)
+			log.Infof("Skipping row: %v", err)
 			continue
 		}
 		txs = append(txs, tx)

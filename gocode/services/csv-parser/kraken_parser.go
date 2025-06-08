@@ -4,13 +4,14 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
+	log "github.com/sirupsen/logrus"
 )
 
 type KrakenParser struct{}
@@ -27,6 +28,14 @@ type krakenGenericRecord struct {
 	Amount  float64   `json:"amount"`
 	Fee     float64   `json:"fee"`
 	Balance float64   `json:"balance"`
+}
+
+var reStakedAssetName = regexp.MustCompile(`^([A-Z]+)([0-9.]*\.S)?$`)
+
+func parseStakedAssetName(input string) (string, error) {
+	m := reStakedAssetName.FindStringSubmatch(input)
+	return m[1], nil
+
 }
 
 func isBaseCurrency(asset string) bool {
@@ -79,7 +88,7 @@ func (k KrakenParser) ParseGenericRecord(r []string) (krakenGenericRecord, error
 
 func (k KrakenParser) ParseTradeRecord(recieve krakenGenericRecord, taken krakenGenericRecord) (models.TradeTransaction, error) {
 	if recieve.Refid != taken.Refid {
-		return models.TradeTransaction{}, fmt.Errorf("both records must be of type 'trade'")
+		return models.TradeTransaction{}, fmt.Errorf("both records must be of same ref ix ", recieve.Refid, taken.Refid)
 	}
 
 	isBaseCurrency := isBaseCurrency(taken.Asset)
@@ -107,8 +116,29 @@ func (k KrakenParser) ParseTradeRecord(recieve krakenGenericRecord, taken kraken
 	}, nil
 }
 
+func (k KrakenParser) ParseSimpleRecord(record krakenGenericRecord) (models.SimpleTransaction, error) {
+
+	assetName, err := parseStakedAssetName(record.Asset)
+	if err != nil {
+		return models.SimpleTransaction{}, fmt.Errorf("failed to parse asset name %s: %v", record.Asset, err)
+	}
+	return models.SimpleTransaction{
+		Type: "income",
+		BaseTransaction: models.BaseTransaction{
+			Date:        record.Time,
+			ExternalID:  record.Txid,
+			Description: "",
+			Amount:      record.Amount,
+			Asset:       assetName,
+			Source:      "CSV Upload",
+			UserID:      1,
+		},
+	}, nil
+}
+
 func (b KrakenParser) ParseFile(reader *csv.Reader) ([]models.SimpleTransaction, []models.TradeTransaction, error) {
-	var txs []models.TradeTransaction
+	var tradeTxs []models.TradeTransaction
+	var simpleTxs []models.SimpleTransaction
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -117,26 +147,38 @@ func (b KrakenParser) ParseFile(reader *csv.Reader) ([]models.SimpleTransaction,
 
 		genericRecord, err := b.ParseGenericRecord(record)
 		if err != nil {
-			fmt.Println("Skipping row: %v", err)
+			log.Infof("Skipping row: %v", err)
 			continue
 		}
 
 		if genericRecord.Type == "trade" {
 			relatedRecord, err := reader.Read()
 			if err == io.EOF {
-				fmt.Println("No related record found for trade, skipping")
+				log.Infof("No related record found for trade, skipping")
 				break
 			}
 			relatedGenericRecord, err := b.ParseGenericRecord(relatedRecord)
 			tx, err := b.ParseTradeRecord(relatedGenericRecord, genericRecord)
 			if err != nil {
-				log.Printf("Skipping row: %v", err)
+				log.Infof("Skipping row: %v", err)
 				continue
 			}
-			txs = append(txs, tx)
-
+			tradeTxs = append(tradeTxs, tx)
+		} else if genericRecord.Type == "staking" || genericRecord.Type == "earn" {
+			if genericRecord.Subtype == "migration" {
+				log.Infof("Skipping migration record: %s", genericRecord.Txid)
+				continue
+			}
+			tx, err := b.ParseSimpleRecord(genericRecord)
+			if err != nil {
+				log.Warnf("Skipping row: %v", err)
+				continue
+			}
+			simpleTxs = append(simpleTxs, tx)
+		} else {
+			continue
 		}
 	}
 
-	return []models.SimpleTransaction{}, txs, nil
+	return simpleTxs, tradeTxs, nil
 }
