@@ -39,6 +39,15 @@ func (db *Database) GetUserByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
+func (db *Database) GetCurrencies() ([]models.Currency, error) {
+	var currency []models.Currency
+	result := db.DB.Order("name ASC").Find(&currency)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return currency, nil
+}
+
 func (db *Database) CreateOrUpdateUser(user *models.User) error {
 
 	var existing models.User

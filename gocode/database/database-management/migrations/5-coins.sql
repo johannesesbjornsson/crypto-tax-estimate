@@ -17,10 +17,11 @@ INSERT INTO currencies (name, type) VALUES
   ('DOGE', 'crypto'),
   ('ROSE', 'crypto'),
   ('POL', 'crypto'),
-  ('MATIC', 'crypto'),
   ('NEAR', 'crypto'),
   ('AVAX', 'crypto');
 
+
+INSERT INTO currencies (name, type, pegged_to) VALUES  ('MATIC', 'crypto', (SELECT id FROM currencies WHERE name = 'POL'));
 
 INSERT INTO currencies (name, type) VALUES 
 ('USD', 'fiat'),
