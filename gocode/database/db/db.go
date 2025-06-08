@@ -55,20 +55,36 @@ func (db *Database) CreateOrUpdateUser(user *models.User) error {
 	return db.DB.Create(user).Error
 }
 
-func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]models.Transaction, int, error) {
+func (db *Database) NewTradeTransaction(base *models.BaseTransaction, price float64, quote string) (*models.TradeTransaction, error) {
+	return &models.TradeTransaction{
+		BaseTransaction: *base,
+		Type:            base.Type,
+		Price:           price,
+		QuoteCurrency:   quote,
+	}, nil
+}
+
+func (db *Database) NewSimpleTransaction(base *models.BaseTransaction) (*models.SimpleTransaction, error) {
+	return &models.SimpleTransaction{
+		BaseTransaction: *base,
+		Type:            base.Type,
+	}, nil
+}
+
+func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]models.TradeTransaction, int, error) {
 	var user models.User
 	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, 0, err
 	}
 
 	var total int64
-	if err := db.DB.Model(&models.Transaction{}).
+	if err := db.DB.Model(&models.TradeTransaction{}).
 		Where("user_id = ?", user.ID).
 		Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	var transactions []models.Transaction
+	var transactions []models.TradeTransaction
 	query := db.DB.
 		Where("user_id = ?", user.ID).
 		Order("date DESC")
@@ -92,7 +108,7 @@ func (db *Database) GetTransactionsByEmail(email string, limit, offset int) ([]m
 	return transactions, totalPages, nil
 }
 
-func (db *Database) CreateTransaction(tx *models.Transaction) error {
+func (db *Database) CreateSimpleTransaction(tx *models.SimpleTransaction) error {
 	if tx == nil {
 		return fmt.Errorf("transaction cannot be nil")
 	}
@@ -103,6 +119,19 @@ func (db *Database) CreateTransaction(tx *models.Transaction) error {
 
 	return db.DB.Create(tx).Error
 }
+
+func (db *Database) CreateTradeTransaction(tx *models.TradeTransaction) error {
+	if tx == nil {
+		return fmt.Errorf("transaction cannot be nil")
+	}
+
+	if tx.UserID == 0 {
+		return fmt.Errorf("missing UserID on transaction")
+	}
+
+	return db.DB.Create(tx).Error
+}
+
 
 func (db *Database) GetFileUploadsByUserID(userID uint) ([]models.FileUploads, error) {
 	if userID == 0 {

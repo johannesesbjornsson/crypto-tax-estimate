@@ -1,18 +1,19 @@
 package main
 
 import (
-	"encoding/csv"
+	//"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"io"
+	//"io"
 	"net/http"
-	"regexp"
+	//"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/db"
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
+	csv_parser "github.com/johannesesbjornsson/crypto-tax-estimate/services/csv-parser"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -71,7 +72,7 @@ func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	response := struct {
-		Transactions []models.Transaction `json:"transactions"`
+		Transactions []models.TradeTransaction `json:"transactions"`
 		TotalPages   int                  `json:"totalPages"`
 	}{
 		Transactions: transactions,
@@ -82,7 +83,7 @@ func GetTransactions(db *db.Database, w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.Request) {
-	var tx models.Transaction
+	var tx models.BaseTransaction
 	if err := json.NewDecoder(r.Body).Decode(&tx); err != nil {
 		log.Errorf("Failed to decode transaction JSON: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -104,10 +105,21 @@ func CreateOrUpdateTransaction(db *db.Database, w http.ResponseWriter, r *http.R
 
 	tx.UserID = user.ID
 	tx.Source = "Manual"
+	tx.Type = strings.ToLower(tx.Type)
 
-	if err := db.CreateTransaction(&tx); err != nil {
-		http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
-		return
+	if tx.Type == "buy" || tx.Type == "sell" {
+		price, _ :=strconv.ParseFloat(r.FormValue("price"), 64)
+		tradeTx, _ := db.NewTradeTransaction(&tx, price, r.FormValue("quote_currency"))
+		if err := db.CreateTradeTransaction(tradeTx); err != nil {
+			http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		simpleTx, _ := db.NewSimpleTransaction(&tx)
+		if err := db.CreateSimpleTransaction(simpleTx); err != nil {
+			http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
+			return
+		}		
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -130,6 +142,58 @@ func GetFileUploads(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(uploads)
 }
 
+
+func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
+
+	user, err := db.GetUserByEmail("johannes.esbjornsson@gmail.com")
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	description := r.FormValue("description")
+	file, fileHeader, err := r.FormFile("file")
+	_, tradeTransactions, err := csv_parser.ParseCSV(file)
+	if err != nil {
+		log.Errorf("Failed to parse CSV file: %v", err)
+		http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Parsed %d trade transactions from CSV file %s", len(tradeTransactions), fileHeader.Filename)
+
+
+	fileUpload := models.FileUploads{
+		Name:        fileHeader.Filename,
+		UserID:      user.ID,
+		Description: description,
+		CreatedAt:   time.Now(),
+	}
+
+	if err := db.CreateFileUpload(&fileUpload); err != nil {
+		http.Error(w, "Failed to record file upload", http.StatusInternalServerError)
+		return
+	}
+
+	for _, tx := range tradeTransactions {
+		tx.Description = description
+		tx.Source = fileHeader.Filename
+		if err := db.CreateTradeTransaction(&tx); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to save: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("CSV upload successful"))
+
+}
+
+/*
 func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "Unable to parse form", http.StatusBadRequest)
@@ -174,7 +238,7 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var transactions []models.Transaction
+	var transactions []models.TradeTransaction
 
 	for {
 		record, err := reader.Read()
@@ -215,7 +279,7 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		tx := models.Transaction{
+		tx := models.TradeTransaction{
 			Date:        date,
 			Description: description,
 			Type:        strings.Title(strings.ToLower(record[2])),
@@ -239,3 +303,4 @@ func UploadCSV(db *db.Database, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("CSV upload successful"))
 }
+*/

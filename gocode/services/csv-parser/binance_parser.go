@@ -1,8 +1,7 @@
-package main
+package csvparser
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"log"
 	"regexp"
@@ -37,10 +36,10 @@ func (b BinanceParser) HeadersMatch(h []string) bool {
 		strings.EqualFold(cleanHeader(h[6]), "Fee")
 }
 
-func (b BinanceParser) ParseTradeRecord(r []string) (models.Transaction, error) {
+func (b BinanceParser) ParseTradeRecord(r []string) (models.TradeTransaction, error) {
 	date, err := time.Parse("2006-01-02 15:04:05", r[0])
 	if err != nil {
-		return models.Transaction{}, err
+		return models.TradeTransaction{}, err
 	}
 
 	amount, asset := parseAmountAndAsset(r[4])
@@ -48,22 +47,24 @@ func (b BinanceParser) ParseTradeRecord(r []string) (models.Transaction, error) 
 
 	price, _ := strconv.ParseFloat(r[3], 64)
 
-	return models.Transaction{
-		Date:          date,
-		Description:   "",
-		Type:          r[2],
-		Amount:        amount,
+	return models.TradeTransaction{
+		Type:          strings.ToLower(r[2]),
 		Price:         price,
-		Asset:         asset,
 		QuoteCurrency: quoteAsset,
-		Source:        "CSV Upload",
-		UserID:        1,
+		BaseTransaction: models.BaseTransaction{
+			Date:          date,
+			Description:   "",
+			Amount:        amount,
+			Asset:         asset,
+			Source:        "CSV Upload",
+			UserID:        1,
+		},
 	}, nil
 
 }
 
-func (b BinanceParser) ParseFile(reader *csv.Reader) ([]models.Transaction, error) {
-	var txs []models.Transaction
+func (b BinanceParser) ParseFile(reader *csv.Reader) ([]models.SimpleTransaction, []models.TradeTransaction, error) {
+	var txs []models.TradeTransaction
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -75,8 +76,7 @@ func (b BinanceParser) ParseFile(reader *csv.Reader) ([]models.Transaction, erro
 			log.Printf("Skipping row: %v", err)
 			continue
 		}
-		fmt.Printf("Parsed: %+v\n", tx)
 		txs = append(txs, tx)
 	}
-	return txs, nil
+	return []models.SimpleTransaction{}, txs, nil
 }

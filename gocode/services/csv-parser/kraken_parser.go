@@ -1,4 +1,4 @@
-package main
+package csvparser
 
 import (
 	"encoding/csv"
@@ -77,35 +77,38 @@ func (k KrakenParser) ParseGenericRecord(r []string) (krakenGenericRecord, error
 	}, nil
 }
 
-func (k KrakenParser) ParseTradeRecord(recieve krakenGenericRecord, taken krakenGenericRecord) (models.Transaction, error) {
+func (k KrakenParser) ParseTradeRecord(recieve krakenGenericRecord, taken krakenGenericRecord) (models.TradeTransaction, error) {
 	if recieve.Refid != taken.Refid {
-		return models.Transaction{}, fmt.Errorf("both records must be of type 'trade'")
+		return models.TradeTransaction{}, fmt.Errorf("both records must be of type 'trade'")
 	}
 
 	isBaseCurrency := isBaseCurrency(taken.Asset)
-	side := "Buy"
+	side := "buy"
 	if !isBaseCurrency {
-		side = "Sell"
+		side = "sell"
 	}
 	if taken.Amount > 0 {
-		return models.Transaction{}, fmt.Errorf("taken amount must be negative", taken.Amount)
+		return models.TradeTransaction{}, fmt.Errorf("taken amount must be negative", taken.Amount)
 	}
 
-	return models.Transaction{
-		Date:          recieve.Time,
-		Description:   "",
-		Type:          side,
-		Amount:        recieve.Amount,
-		Price:         math.Abs(taken.Amount) / recieve.Amount,
-		Asset:         recieve.Asset,
+	return models.TradeTransaction{
 		QuoteCurrency: taken.Asset,
-		Source:        "CSV Upload",
-		UserID:        1,
+		Type:          side,
+		Price:         math.Abs(taken.Amount) / recieve.Amount,
+		BaseTransaction: models.BaseTransaction{
+			Date:          recieve.Time,
+			ExternalID:    taken.Txid,
+			Description:   "",
+			Amount:        recieve.Amount,
+			Asset:         recieve.Asset,
+			Source:        "CSV Upload",
+			UserID:        1,
+		},
 	}, nil
 }
 
-func (b KrakenParser) ParseFile(reader *csv.Reader) ([]models.Transaction, error) {
-	var txs []models.Transaction
+func (b KrakenParser) ParseFile(reader *csv.Reader) ([]models.SimpleTransaction, []models.TradeTransaction, error) {
+	var txs []models.TradeTransaction
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -130,13 +133,10 @@ func (b KrakenParser) ParseFile(reader *csv.Reader) ([]models.Transaction, error
 				log.Printf("Skipping row: %v", err)
 				continue
 			}
-			fmt.Printf("Parsed: %+v\n", tx)
-			fmt.Printf("----------\n")
+			txs = append(txs, tx)
 			
-
-		}
-
-		
+		}	
 	}
-	return txs, nil
+
+	return []models.SimpleTransaction{}, txs, nil
 }

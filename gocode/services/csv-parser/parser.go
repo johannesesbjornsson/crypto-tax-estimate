@@ -1,17 +1,17 @@
-package main
+package csvparser
 
 import (
 	"encoding/csv"
 	"fmt"
 	"github.com/johannesesbjornsson/crypto-tax-estimate/database/models"
 	"log"
-	"os"
+	"mime/multipart"
 	"strings"
 )
 
 type CSVParser interface {
 	HeadersMatch([]string) bool
-	ParseFile(*csv.Reader) ([]models.Transaction, error)
+	ParseFile(*csv.Reader) ([]models.SimpleTransaction, []models.TradeTransaction, error)
 }
 
 func cleanHeader(s string) string {
@@ -32,16 +32,16 @@ func detectParser(headers []string, parsers []CSVParser) (CSVParser, error) {
 }
 
 
-
-func main() {
-	filePath := "/Users/johannesesbjornsson/workspace/personal-testing/binance_2021-2022.csv"
+     
+func ParseCSV(file multipart.File) ([]models.SimpleTransaction, []models.TradeTransaction, error) {
+	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/binance_2021-2022.csv"
 	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/kraken_2023-2024.csv"
 
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Fatalf("Failed to open file: %v", err)
-	}
-	defer file.Close()
+	//file, err := os.Open(filePath)
+	//if err != nil {
+	//	log.Fatalf("Failed to open file: %v", err)
+	//}
+	//defer file.Close()
 
 	reader := csv.NewReader(file)
 	reader.LazyQuotes = true
@@ -59,6 +59,22 @@ func main() {
 	}
 
 	fmt.Printf("Detected format: %T\n", parser)
-	parser.ParseFile(reader)
+
+	return parser.ParseFile(reader)
 
 }
+
+/*
+func main() {
+	filePath := "/Users/johannesesbjornsson/workspace/personal-testing/binance_2021-2022.csv"
+	//filePath := "/Users/johannesesbjornsson/workspace/personal-testing/kraken_2023-2024.csv"
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatalf("Failed to open file: %v", err)
+	}
+	defer file.Close()
+	ParseFile(file) // Call the ParseFile function to start parsing
+
+}
+*/
