@@ -19,13 +19,15 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   const [formData, setFormData] = useState({
+    type: 'Buy',
     date: '',
     description: '',
-    type: 'Buy',
     amount: '',
     price: '',
+    quote_currency: 'USD',
     asset: '',
   });
+
   const [csvFile, setCsvFile] = useState(null);
   const [csvDescription, setCsvDescription] = useState('');
 
@@ -35,7 +37,7 @@ export default function TransactionsPage() {
         setLoading(true);
         const offset = (page - 1) * limit;
 
-        const txRes = await fetch(`/v1/transactions?limit=${limit}&offset=${offset}`);
+        const txRes = await fetch(`/v1/transactions?limit=${limit}&offset=${offset}&txType=trade`);
         const uploadRes = await fetch('/v1/transactions/upload');
 
         if (!txRes.ok || !uploadRes.ok) throw new Error('Failed to fetch data');
@@ -62,28 +64,69 @@ export default function TransactionsPage() {
   };
 
   const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, files } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'file' ? files[0] : value,
+    }));
+  };
+  const handleCSVFormChange = (e) => {
+    const { name, value, files } = e.target;
+
+    if (name === 'file') {
+      setCsvFile(files[0]);
+    } else {
+      setCsvDescription(value);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormErrorMessage('');
+
     try {
-      const res = await fetch('/v1/transactions', {
+      const { type, date, amount, price, quote_currency, description, asset } = formData;
+      const isTrade = type === 'Buy' || type === 'Sell';
+
+      const payload = {
+        type,
+        date: new Date(date).toISOString(),
+        amount: parseFloat(amount),
+        asset,
+        description,
+      };
+
+      let url = '/v1/transactions';
+      if (isTrade) {
+        const query = new URLSearchParams({
+          price: price.toString(),
+          quote_currency,
+        }).toString();
+        url += `?${query}`;
+      }
+
+      const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount),
-          price: parseFloat(formData.price),
-          date: new Date(formData.date).toISOString(),
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
+
       if (!res.ok) throw new Error('Failed to add transaction');
       const updated = await res.json();
       setTransactions(prev => [updated, ...prev]);
-      setFormData({ date: '', description: '', price: '', type: 'Buy', amount: '', asset: '' });
+
+      setFormData({
+        date: '',
+        description: '',
+        price: '',
+        quote_currency: 'USD',
+        type: 'Buy',
+        amount: '',
+        asset: ''
+      });
+
       setShowForm(false);
       setSuccessMessage('✅ Transaction added');
       setIsError(false);
@@ -140,28 +183,27 @@ export default function TransactionsPage() {
     setShowForm(false);
   };
 
-  const handleCSVFormChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === 'file') {
-      setCsvFile(files[0]);
-    } else if (name === 'description') {
-      setCsvDescription(value);
-    }
-  };
+  const isTrade = formData.type === 'Buy' || formData.type === 'Sell';
+
+  const baseFields = [
+    { name: 'type', label: 'Type', type: 'select', options: ['Income', 'Buy', 'Sell', 'Lost'] },
+    { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'description', label: 'Description', type: 'text' },
+    { name: 'amount', label: 'Amount', type: 'number', step: '0.01', required: true },
+    { name: 'asset', label: 'Asset', type: 'text', required: true },
+  ];
+
+  const tradeFields = [
+    { name: 'price', label: 'Price', type: 'number', step: '0.01', required: true },
+    { name: 'quote_currency', label: 'Quote Currency', type: 'text', required: true },
+  ];
+
+  const fields = isTrade ? [...baseFields, ...tradeFields] : baseFields;
 
   const csvFormData = {
     file: csvFile,
     description: csvDescription
   };
-
-  const fields = [
-    { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'description', label: 'Description', type: 'text' },
-    { name: 'type', label: 'Type', type: 'select', options: ['Income', 'Buy', 'Sell', 'Lost'] },
-    { name: 'amount', label: 'Amount', type: 'number', step: '0.01', required: true },
-    { name: 'price', label: 'Price', type: 'number', step: '0.01', required: true },
-    { name: 'asset', label: 'Asset', type: 'text', required: true },
-  ];
 
   const csvFormFields = [
     { name: 'file', label: 'File', type: 'file', accept: '.csv', required: true },
